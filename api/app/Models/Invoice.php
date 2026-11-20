@@ -1,0 +1,4 @@
+<?php
+namespace App\Models;
+use Illuminate\Database\Eloquent\Model;
+class Invoice extends Model { protected $guarded=[]; protected $casts=['issue_date'=>'date','due_date'=>'date','subtotal'=>'decimal:2','discount'=>'decimal:2','tax'=>'decimal:2','total'=>'decimal:2','amount_paid'=>'decimal:2','balance'=>'decimal:2']; public function company(){return $this->belongsTo(Company::class);} public function branch(){return $this->belongsTo(Branch::class);} public function client(){return $this->belongsTo(Client::class);} public function sale(){return $this->belongsTo(Sale::class);} public function items(){return $this->hasMany(InvoiceItem::class);} public function payments(){return $this->hasManyThrough(Payment::class,PaymentAllocation::class,'invoice_id','id','id','payment_id');} public function allocations(){return $this->hasMany(PaymentAllocation::class);} }

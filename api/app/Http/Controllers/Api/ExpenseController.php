@@ -1,0 +1,13 @@
+<?php
+namespace App\Http\Controllers\Api;
+use App\Http\Controllers\Controller;
+use App\Models\Expense;
+use Illuminate\Http\Request;
+class ExpenseController extends Controller {
+ public function index(Request $r){$q=Expense::where('company_id',$r->user()->company_id)->with('category');if($r->filled('search'))$q->where(fn($x)=>$x->where('expense_number','like','%'.$r->search.'%')->orWhere('description','like','%'.$r->search.'%'));return $q->latest('expense_date')->paginate($r->integer('per_page',20));}
+ public function store(Request $r){$data=$r->validate(['branch_id'=>['nullable','exists:branches,id',function($attribute,$value,$fail)use($r){if($value && !\App\Models\Branch::where('company_id',$r->user()->company_id)->whereKey($value)->exists())$fail('The selected branch is invalid.');}],'category_id'=>['nullable','exists:expense_categories,id',function($attribute,$value,$fail)use($r){if($value && !\App\Models\ExpenseCategory::where('company_id',$r->user()->company_id)->whereKey($value)->exists())$fail('The selected category is invalid.');}],'expense_date'=>'required|date','description'=>'required|string|max:255','amount'=>'required|numeric|min:0.01','payment_method'=>'required|string|max:50']);$data['company_id']=$r->user()->company_id;$data['user_id']=$r->user()->id;$data['expense_number']=$this->number($data['company_id']);return response()->json(Expense::create($data)->load('category'),201);}
+ public function show(Request $r,Expense $expense){abort_unless($expense->company_id===$r->user()->company_id,404);return $expense->load('category','branch');}
+ public function update(Request $r,Expense $expense){abort_unless($expense->company_id===$r->user()->company_id,404);$data=$r->validate(['branch_id'=>['nullable','exists:branches,id',function($attribute,$value,$fail)use($r){if($value && !\App\Models\Branch::where('company_id',$r->user()->company_id)->whereKey($value)->exists())$fail('The selected branch is invalid.');}],'category_id'=>['nullable','exists:expense_categories,id',function($attribute,$value,$fail)use($r){if($value && !\App\Models\ExpenseCategory::where('company_id',$r->user()->company_id)->whereKey($value)->exists())$fail('The selected category is invalid.');}],'expense_date'=>'required|date','description'=>'required|string|max:255','amount'=>'required|numeric|min:0.01','payment_method'=>'required|string|max:50']);$expense->update($data);return $expense->fresh()->load('category');}
+ public function destroy(Request $r,Expense $expense){abort_unless($expense->company_id===$r->user()->company_id,404);$expense->delete();return response()->noContent();}
+ private function number($companyId){return 'EXP-'.str_pad((string)(Expense::where('company_id',$companyId)->count()+1),6,'0',STR_PAD_LEFT);}
+}
